@@ -1,0 +1,82 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:13-3.1 # Use a PostGIS enabled image (e.g., PostGIS 13, PG 3.1)
+    container_name: portal_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: ${DB_USER:-portal_user} # Use .env file or set defaults
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-portal_password}
+      POSTGRES_DB: ${DB_NAME:-portal_db}
+    ports:
+      - "5432:5432" # Expose for local inspection if needed (remove in prod)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-portal_user} -d ${DB_NAME:-portal_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lausanne_backend
+    # For development, mount code for hot-reloading with Django's dev server
+    # command: python manage.py runserver 0.0.0.0:8000
+    # For production-like with Gunicorn and entrypoint.sh:
+    entrypoint: /app/backend/entrypoint.sh # Make sure path is correct if entrypoint.sh is in root of backend
+    volumes:
+      - ./backend:/app # Mount local backend code into the container
+      # - static_volume:/app/staticfiles # If collecting static files to a volume
+      # - media_volume:/app/mediafiles   # If handling media files
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=backend.settings
+      - SECRET_KEY=${DJANGO_SECRET_KEY:-your_default_secret_key_for_dev} # Use .env
+      - DEBUG=${DJANGO_DEBUG:-1} # 1 for True, 0 for False
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME:-portal_db}
+      - DB_USER=${DB_USER:-portal_user}
+      - DB_PASSWORD=${DB_PASSWORD:-portal_password}
+      - DB_PORT=5432
+      - CORS_ALLOWED_ORIGINS=http://localhost:3001,http://127.0.0.1:3001 # Frontend port
+      # - GUNICORN_WORKERS=3
+      # - GUNICORN_TIMEOUT=120
+    depends_on:
+      db:
+        condition: service_healthy # Wait for db to be healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args: # Pass build-time arguments to frontend Dockerfile
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-/api} # Use /api for Nginx proxy
+    container_name: lausanne_frontend
+    # For development with React Dev Server & hot-reloading:
+    # This bypasses the Nginx setup in frontend/Dockerfile and runs `npm start`
+    # command: npm start
+    # volumes:
+    #   - ./frontend:/app          # Mount local frontend code
+    #   - /app/node_modules      # Prevent host node_modules from overwriting container's
+    # ports:
+    #   - "3001:3000" # Map container's 3000 (React dev server) to host's 3001
+    # For production-like build served by Nginx (as defined in frontend/Dockerfile)
+    ports:
+      - "3001:80" # Nginx in container runs on 80, map to 3001 on host
+    environment:
+      - NODE_ENV=${NODE_ENV:-production} # 'development' or 'production'
+      # REACT_APP_API_URL is now a build arg for the Dockerfile
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  # static_volume: # If you manage static files via Docker volumes
+  # media_volume:  # If you manage media files via Docker volumes
