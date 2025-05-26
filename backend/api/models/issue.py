@@ -3,6 +3,8 @@ from django.contrib.gis.db import models as gis_models
 from django.contrib.auth.models import User
 
 from api.models.abstract import SimpleModel
+from api.models.department import Department
+from api.models.issue_category import IssueCategory
 
 
 class Issue(SimpleModel):
@@ -24,7 +26,7 @@ class Issue(SimpleModel):
     )
 
     category = models.ForeignKey(
-        "api.IsuueCategory",
+        IssueCategory,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -51,7 +53,7 @@ class Issue(SimpleModel):
         related_name="reported_issues",
     )
     assigned_to_department = models.ForeignKey(
-        "api.Departement",
+        Department,
         on_delete=models.CASCADE,
         blank=True,
         null=True,

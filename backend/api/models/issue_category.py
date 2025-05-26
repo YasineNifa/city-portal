@@ -1,7 +1,7 @@
 from api.models.abstract import SimpleModel
 
 
-class IsuueCategory(SimpleModel):
+class IssueCategory(SimpleModel):
     class Meta:
         verbose_name_plural = "Issue Categories"
 
