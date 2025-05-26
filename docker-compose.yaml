@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER:-portal_user} # Use .env file or set defaults
       POSTGRES_PASSWORD: ${DB_PASSWORD:-portal_password}
-      POSTGRES_DB: ${DB_NAME:-portal_db}
+      POSTGRES_DB: ${DB_NAME:-lausanne_smart_city_db}
     ports:
       - "5432:5432" # Expose for local inspection if needed (remove in prod)
     healthcheck:
@@ -23,11 +23,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - UID=${UID:-1000}  # Pass host user ID to prevent permission issues
+        - GID=${GID:-1000}  # Pass host group ID
     container_name: lausanne_backend
     # For development, mount code for hot-reloading with Django's dev server
     # command: python manage.py runserver 0.0.0.0:8000
     # For production-like with Gunicorn and entrypoint.sh:
-    entrypoint: /app/backend/entrypoint.sh # Make sure path is correct if entrypoint.sh is in root of backend
+    entrypoint: /app/entrypoint.sh # Make sure path is correct if entrypoint.sh is in root of backend
     volumes:
       - ./backend:/app # Mount local backend code into the container
       # - static_volume:/app/staticfiles # If collecting static files to a volume
@@ -35,6 +38,8 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - GDAL_LIBRARY_PATH=/usr/lib/libgdal.so
+      - GEOS_LIBRARY_PATH=/usr/lib/libgeos_c.so
       - DJANGO_SETTINGS_MODULE=backend.settings
       - SECRET_KEY=${DJANGO_SECRET_KEY:-your_default_secret_key_for_dev} # Use .env
       - DEBUG=${DJANGO_DEBUG:-1} # 1 for True, 0 for False

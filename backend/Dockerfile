@@ -13,6 +13,10 @@ ENV PYTHONUNBUFFERED 1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    libgdal-dev \
+    gdal-bin \
+    python3-gdal \
+    && rm -rf /var/lib/apt/lists/*
     # For PostGIS client utilities (like shp2pgsql, raster2pgsql), though not strictly needed for app runtime
     # postgresql-client \
     # For Pillow (image processing)
@@ -21,7 +25,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # libgdal-dev \
     # For GEOS and PROJ (core GIS libraries, usually libpq-dev pulls some of this)
     # libgeos-dev libproj-dev \
-    && rm -rf /var/lib/apt/lists/*
 
 COPY ./requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
@@ -39,10 +42,12 @@ ENV PYTHONPATH=/app
 # Install system dependencies (minimal set for runtime)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libgdal32 \
+    gdal-bin \
+    && rm -rf /var/lib/apt/lists/*
     # libgdal30 # If using GDAL features from django.contrib.gis.gdal
     # libgeos-c1v5 # If needed by GEOS features
     # libproj19 # If needed by PROJ features
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy pre-built wheels and install
 COPY --from=builder /usr/src/app/wheels /wheels
