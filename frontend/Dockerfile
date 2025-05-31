@@ -17,7 +17,7 @@ RUN npm install
 COPY . .
 
 # Set the API URL build argument (can be overridden at build time)
-ARG REACT_APP_API_URL=http://localhost:8000/api
+ARG REACT_APP_API_URL=http://localhost:8002/api
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 
 # Build the React app for production

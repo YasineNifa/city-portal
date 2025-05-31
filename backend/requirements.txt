@@ -22,3 +22,6 @@ typing_extensions==4.13.2
 tzdata==2024.2
 gunicorn==21.2.0
 packaging>=21.0
+django-rest-framework-nested==0.0.1
+whitenoise
+# drf-spectacular==0.26.2

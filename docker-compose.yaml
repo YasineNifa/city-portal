@@ -3,18 +3,18 @@ version: '3.8'
 
 services:
   db:
-    image: postgis/postgis:13-3.1 # Use a PostGIS enabled image (e.g., PostGIS 13, PG 3.1)
-    container_name: portal_db
+    image: postgis/postgis:13-3.1
+    container_name: db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      POSTGRES_USER: ${DB_USER:-portal_user} # Use .env file or set defaults
+      POSTGRES_USER: ${DB_USER:-portal_user} #TODO Use environment variable
       POSTGRES_PASSWORD: ${DB_PASSWORD:-portal_password}
-      POSTGRES_DB: ${DB_NAME:-lausanne_smart_city_db}
+      POSTGRES_DB: ${DB_NAME:-portal_db}
     ports:
-      - "5432:5432" # Expose for local inspection if needed (remove in prod)
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-portal_user} -d ${DB_NAME:-portal_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-portal_user} -d ${DB_NAME:-db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,44 +24,45 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        - UID=${UID:-1000}  # Pass host user ID to prevent permission issues
-        - GID=${GID:-1000}  # Pass host group ID
+        - UID=${UID:-1000}  # Prevent permission issues
+        - GID=${GID:-1000} 
     container_name: lausanne_backend
     # For development, mount code for hot-reloading with Django's dev server
-    # command: python manage.py runserver 0.0.0.0:8000
+    # command: python manage.py runserver 0.0.0.0:8002
     # For production-like with Gunicorn and entrypoint.sh:
-    entrypoint: /app/entrypoint.sh # Make sure path is correct if entrypoint.sh is in root of backend
+    entrypoint: /app/entrypoint.sh
     volumes:
-      - ./backend:/app # Mount local backend code into the container
+      - ./backend:/app
+      - ./backend/staticfiles:/app/staticfiles
       # - static_volume:/app/staticfiles # If collecting static files to a volume
       # - media_volume:/app/mediafiles   # If handling media files
     ports:
-      - "8000:8000"
+      - "8002:8002"
     environment:
       - GDAL_LIBRARY_PATH=/usr/lib/libgdal.so
       - GEOS_LIBRARY_PATH=/usr/lib/libgeos_c.so
       - DJANGO_SETTINGS_MODULE=backend.settings
       - SECRET_KEY=${DJANGO_SECRET_KEY:-your_default_secret_key_for_dev} # Use .env
-      - DEBUG=${DJANGO_DEBUG:-1} # 1 for True, 0 for False
+      - DEBUG=${DJANGO_DEBUG:-1}
       - DB_HOST=db
-      - DB_NAME=${DB_NAME:-portal_db}
+      - DB_NAME=${DB_NAME:-db}
       - DB_USER=${DB_USER:-portal_user}
       - DB_PASSWORD=${DB_PASSWORD:-portal_password}
       - DB_PORT=5432
-      - CORS_ALLOWED_ORIGINS=http://localhost:3001,http://127.0.0.1:3001 # Frontend port
+      - CORS_ALLOWED_ORIGINS=http://localhost:3001,http://127.0.0.1:3001
       # - GUNICORN_WORKERS=3
       # - GUNICORN_TIMEOUT=120
     depends_on:
       db:
-        condition: service_healthy # Wait for db to be healthy
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args: # Pass build-time arguments to frontend Dockerfile
-        REACT_APP_API_URL: ${REACT_APP_API_URL:-/api} # Use /api for Nginx proxy
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-/api}
     container_name: lausanne_frontend
     # For development with React Dev Server & hot-reloading:
     # This bypasses the Nginx setup in frontend/Dockerfile and runs `npm start`

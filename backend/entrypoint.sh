@@ -36,9 +36,9 @@ echo "Applying database migrations..."
 python manage.py migrate --noinput
 
 # Collect static files (if you serve them via Django in dev, or for WhiteNoise)
-# echo "Collecting static files..."
-# python manage.py collectstatic --noinput --clear
+echo "Collecting static files..."
+python manage.py collectstatic --noinput --clear
 
 # Start Gunicorn server
 echo "Starting Gunicorn..."
-exec gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-120}
+exec gunicorn backend.wsgi:application --bind 0.0.0.0:8002 --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-120}

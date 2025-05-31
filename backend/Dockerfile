@@ -61,12 +61,14 @@ RUN mkdir -p /app/staticfiles /app/mediafiles && \
 
 # Copy application code
 COPY . .
-
+RUN python manage.py collectstatic --noinput --clear
+RUN mkdir -p /app/staticfiles && \
+    chown -R django:django /app/staticfiles
 USER django
 
 # Expose the port Gunicorn will run on
-EXPOSE 8000
+EXPOSE 8002
 
 # Entrypoint script for migrations and running Gunicorn (see backend/entrypoint.sh below)
-# CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+# CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8002", "--workers", "3"]
 # Using an entrypoint script is better for running migrations first
