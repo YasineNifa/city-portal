@@ -8,6 +8,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         # get or create superuser
+        self.stdout.write(self.style.NOTICE("Inside the populate Departement Command"))
         user = User.objects.filter(username="admin").first()
         if not user:
             user = User.objects.create_superuser(username="admin", password="test")
@@ -32,5 +33,11 @@ class Command(BaseCommand):
         ]
 
         # create Departments & re-fetch from DB
+        self.stdout.write(self.style.NOTICE("Start Creating Departments"))
         Department.objects.bulk_create(departments)
+        self.stdout.write(self.style.NOTICE("Finish Creating Departments"))
         departments = Department.objects.all()
+        print(f"Departments: {departments}")
+        self.stdout.write(
+            self.style.NOTICE('Successfully create departments "%s"' % departments)
+        )
