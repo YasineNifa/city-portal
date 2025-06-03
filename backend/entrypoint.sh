@@ -41,4 +41,10 @@ python manage.py collectstatic --noinput --clear
 
 # Start Gunicorn server
 echo "Starting Gunicorn..."
-exec gunicorn backend.wsgi:application --bind 0.0.0.0:8002 --workers ${GUNICORN_WORKERS:-3} --timeout ${GUNICORN_TIMEOUT:-120}
+exec gunicorn backend.wsgi:application \
+    --bind 0.0.0.0:8002 \
+    --workers ${GUNICORN_WORKERS:-3} \
+    --timeout ${GUNICORN_TIMEOUT:-120} \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level ${LOG_LEVEL:-info}
