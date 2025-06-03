@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   db:
@@ -16,8 +16,9 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-portal_user} -d ${DB_NAME:-db}"]
+      test: ["CMD-SHELL", "pg_isready -U portal_user -d portal_db"]
       # test: ["CMD-SHELL", "pg_isready -U portal_user -d portal_db"]
+      # ["CMD-SHELL", "pg_isready -U ${DB_USER:-portal_user} -d ${DB_NAME:-portal_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,11 +28,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        - UID=${UID:-1000}  # Prevent permission issues
-        - GID=${GID:-1000} 
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
     container_name: lausanne_backend
     # For development, mount code for hot-reloading with Django's dev server
-    # command: python manage.py runserver 0.0.0.0:8002
+    command: python manage.py runserver 0.0.0.0:8002
     # For production-like with Gunicorn and entrypoint.sh:
     entrypoint: /app/entrypoint.sh
     volumes:
@@ -48,14 +49,12 @@ services:
       - SECRET_KEY=${DJANGO_SECRET_KEY:-your_default_secret_key_for_dev} # Use .env
       - DEBUG=${DJANGO_DEBUG:-1}
       - DB_HOST=db
-      - DB_NAME=${DB_NAME:-db}
-      # - DB_NAME=portal_db
-      - DB_USER=${DB_USER:-portal_user}
-      - DB_PASSWORD=${DB_PASSWORD:-portal_password}
-      # - DB_USER=portal_user
-      # - DB_PASSWORD=portal_password
+      # - DB_NAME=${DB_NAME:-portal_db}
+      - DB_NAME=portal_db
+      - DB_USER=portal_user
+      - DB_PASSWORD=portal_password
       - DB_PORT=5432
-      - CORS_ALLOWED_ORIGINS=http://localhost:3001,http://127.0.0.1:3001
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
       # - GUNICORN_WORKERS=3
       # - GUNICORN_TIMEOUT=120
     depends_on:
@@ -72,18 +71,20 @@ services:
     container_name: lausanne_frontend
     # For development with React Dev Server & hot-reloading:
     # This bypasses the Nginx setup in frontend/Dockerfile and runs `npm start`
-    # command: npm start
-    # volumes:
-    #   - ./frontend:/app          # Mount local frontend code
-    #   - /app/node_modules      # Prevent host node_modules from overwriting container's
-    # ports:
-    #   - "3001:3000" # Map container's 3000 (React dev server) to host's 3001
-    # For production-like build served by Nginx (as defined in frontend/Dockerfile)
+    command: npm run dev -- --host
+    volumes:
+      - ./frontend:/app # Mount local frontend code
+      - /app/node_modules # Prevent host node_modules from overwriting container's
     ports:
-      - "3001:80" # Nginx in container runs on 80, map to 3001 on host
+      - "5173:5173" # Map container's 3000 (React dev server) to host's 5173 HOST:CONTAINER
+    # For production-like build served by Nginx (as defined in frontend/Dockerfile)
+    # ports:
+    #   - "5173:80" # Nginx in container runs on 80, map to 5173 on host
     environment:
-      - NODE_ENV=${NODE_ENV:-production} # 'development' or 'production'
+      - NODE_ENV=development # 'development' or 'production'
       # REACT_APP_API_URL is now a build arg for the Dockerfile
+      - CHOKIDAR_USEPOLLING=true # Fix file watching in Docker
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://backend:8002/api}
     depends_on:
       - backend
     restart: unless-stopped

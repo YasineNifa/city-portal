@@ -1,8 +1,6 @@
-# backend/Dockerfile
-
-# Stage 1: Build dependencies (if you have C extensions that need compiling)
 FROM python:3.9-slim as builder
 
+LABEL mantainer="Yassine Nifa <yasine.nifa@gmail.com>"
 WORKDIR /usr/src/app
 
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -13,19 +11,18 @@ ENV PYTHONUNBUFFERED 1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    # For GDAL (if djangorestframework-gis needs it for more complex operations, or if you use django.contrib.gis.gdal)
     libgdal-dev \
     gdal-bin \
     python3-gdal \
-    && rm -rf /var/lib/apt/lists/*
     # For PostGIS client utilities (like shp2pgsql, raster2pgsql), though not strictly needed for app runtime
     # postgresql-client \
     # For Pillow (image processing)
     # libjpeg62-turbo-dev zlib1g-dev libtiff-dev libfreetype6-dev liblcms2-dev libwebp-dev \
-    # For GDAL (if djangorestframework-gis needs it for more complex operations, or if you use django.contrib.gis.gdal)
-    # libgdal-dev \
     # For GEOS and PROJ (core GIS libraries, usually libpq-dev pulls some of this)
     # libgeos-dev libproj-dev \
-
+    && rm -rf /var/lib/apt/lists/*
+    
 COPY ./requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
 
@@ -42,12 +39,14 @@ ENV PYTHONPATH=/app
 # Install system dependencies (minimal set for runtime)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    # If using GDAL features from django.contrib.gis.gdal
     libgdal32 \
+    # If needed by GEOS features
+    libgeos-c1v5 \
     gdal-bin \
+    # If needed by PROJ features
+    # libproj19 \
     && rm -rf /var/lib/apt/lists/*
-    # libgdal30 # If using GDAL features from django.contrib.gis.gdal
-    # libgeos-c1v5 # If needed by GEOS features
-    # libproj19 # If needed by PROJ features
 
 # Copy pre-built wheels and install
 COPY --from=builder /usr/src/app/wheels /wheels
@@ -70,5 +69,5 @@ USER django
 EXPOSE 8002
 
 # Entrypoint script for migrations and running Gunicorn (see backend/entrypoint.sh below)
-# CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8002", "--workers", "3"]
+CMD ["gunicorn", "backend.wsgi:application", "--reload", "--workers", "3", "--bind", "0.0.0.0:8002"]
 # Using an entrypoint script is better for running migrations first
